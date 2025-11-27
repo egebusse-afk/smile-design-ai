@@ -172,10 +172,27 @@ async def read_index():
 async def health_check():
     return {"status": "healthy"}
 
-# Catch-all for SPA (Must be last)
+# Catch-all for SPA / Static Pages
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
+    # 1. Check for exact file match (e.g. favicon.ico, robots.txt)
+    file_path = os.path.join("static", full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # 2. Check for .html file (e.g. /login -> static/login.html)
+    html_path = os.path.join("static", f"{full_path}.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+        
+    # 3. Check for index.html in directory (e.g. /blog -> static/blog/index.html)
+    index_path = os.path.join("static", full_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+
+    # 4. Fallback to index.html (for client-side routing of dynamic paths)
     if os.path.exists("static/index.html"):
         return FileResponse("static/index.html")
+        
     return {"message": "Frontend not found"}
 
