@@ -100,14 +100,30 @@ class GenerativeService:
             if response.images:
                 generated_image = response.images[0]
                 
-                # Convert back to base64
-                # Vertex AI GeneratedImage.save() expects a path, not a buffer.
-                # We access the bytes directly.
+                # Convert Vertex Image to PIL
                 if hasattr(generated_image, "_image_bytes"):
-                    output_base64 = base64.b64encode(generated_image._image_bytes).decode('utf-8')
+                    gen_img_pil = Image.open(io.BytesIO(generated_image._image_bytes))
                 else:
-                    # Fallback or safety check
                     raise ValueError("Generated image does not contain bytes data.")
+
+                # High-Res Blending Logic
+                # 1. Resize generated image to match original base_image size (if different)
+                if gen_img_pil.size != base_image.size:
+                    gen_img_pil = gen_img_pil.resize(base_image.size, Image.LANCZOS)
+
+                # 2. Blur the mask slightly for seamless blending
+                # We use the original mask_image (which is black/white)
+                # Convert mask to L mode (grayscale)
+                mask_pil = mask_image.convert('L')
+                
+                # 3. Composite: Paste generated teeth onto original image using the mask
+                # This ensures the rest of the face (skin, beard, eyes) remains 100% original high-res
+                final_image = Image.composite(gen_img_pil, base_image, mask_pil)
+                
+                # 4. Convert result to base64
+                output_buffer = io.BytesIO()
+                final_image.save(output_buffer, format="PNG")
+                output_base64 = base64.b64encode(output_buffer.getvalue()).decode('utf-8')
                 
                 return f"data:image/png;base64,{output_base64}"
             else:

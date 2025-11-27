@@ -250,28 +250,49 @@ export default function Dashboard() {
                                         <p className="text-sm text-slate-500 mt-2">Hasta fotoğrafını buraya sürükleyin veya seçin</p>
                                     </div>
                                 ) : (
-                                <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 flex items-center justify-center min-h-[400px] max-h-[70vh]">
-                                    {generatedImage ? (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <ReactCompareImage 
-                                                leftImage={selectedImage} 
-                                                rightImage={generatedImage} 
-                                                sliderLineWidth={2}
-                                                handleSize={40}
+                                <div className="flex flex-col gap-4">
+                                    {/* Main Comparison View */}
+                                    <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 flex items-center justify-center min-h-[400px] max-h-[60vh]">
+                                        {generatedImage ? (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <ReactCompareImage 
+                                                    leftImage={selectedImage} 
+                                                    rightImage={generatedImage} 
+                                                    sliderLineWidth={2}
+                                                    handleSize={40}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <img 
+                                                src={selectedImage} 
+                                                alt="Original" 
+                                                className="max-w-full max-h-[60vh] w-auto h-auto object-contain" 
                                             />
-                                        </div>
-                                    ) : (
-                                        <img 
-                                            src={selectedImage} 
-                                            alt="Original" 
-                                            className="max-w-full max-h-[70vh] w-auto h-auto object-contain" 
-                                        />
-                                    )}
-                                    
-                                    {isProcessing && (
-                                        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
-                                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                                            <p className="text-blue-400 font-medium animate-pulse">{processingStage}</p>
+                                        )}
+                                        
+                                        {isProcessing && (
+                                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
+                                                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                                <p className="text-blue-400 font-medium animate-pulse">{processingStage}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Side-by-Side Preview (Only when generated) */}
+                                    {generatedImage && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-slate-500 text-center uppercase tracking-wider">Öncesi</p>
+                                                <div className="rounded-xl overflow-hidden border border-white/10 bg-black aspect-[4/3]">
+                                                    <img src={selectedImage} alt="Before" className="w-full h-full object-contain" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-blue-500 text-center uppercase tracking-wider">Sonrası</p>
+                                                <div className="rounded-xl overflow-hidden border border-blue-500/30 bg-black aspect-[4/3]">
+                                                    <img src={generatedImage} alt="After" className="w-full h-full object-contain" />
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
