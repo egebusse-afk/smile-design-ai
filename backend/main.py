@@ -39,6 +39,12 @@ async def read_index():
         return FileResponse("static/index.html")
     return {"message": "Smile Design AI API is running (Frontend not found)"}
 
+@app.on_event("startup")
+async def startup_event():
+    print("Starting Smile Design AI Backend - Version: Pro Pipeline v1.1 (SDXL+CodeFormer+Resize)")
+    # Create temp directory if it doesn't exist
+    os.makedirs("temp", exist_ok=True)
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}

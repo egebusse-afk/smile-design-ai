@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 import base64
 import io
+import requests
+from PIL import Image
 
 load_dotenv()
 
@@ -61,9 +63,36 @@ class GenerativeService:
 
         if restored_output:
             # CodeFormer returns a direct URL string usually, or a FileOutput
-            # We need to handle both
-            print(f"Restoration Output Type: {type(restored_output)}")
-            return str(restored_output)
+            final_url = str(restored_output)
         else:
             print("Restoration failed, returning inpainted image.")
-            return inpainted_image_url
+            final_url = inpainted_image_url
+
+        # Step 3: Post-Processing (Resize to original dimensions)
+        # Download the result
+        try:
+            print(f"Downloading result from {final_url}...")
+            response = requests.get(final_url)
+            response.raise_for_status()
+            
+            generated_img = Image.open(io.BytesIO(response.content))
+            
+            # Get original dimensions from input base64
+            # We decode the input image just to get its size
+            input_img = Image.open(io.BytesIO(base64.b64decode(image_base64)))
+            original_size = input_img.size # (width, height)
+            
+            print(f"Resizing from {generated_img.size} to {original_size}...")
+            generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
+            
+            # Convert back to base64
+            buffer = io.BytesIO()
+            generated_img.save(buffer, format="PNG")
+            final_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
+            return f"data:image/png;base64,{final_base64}"
+            
+        except Exception as e:
+            print(f"Error in resizing/downloading: {e}")
+            # Fallback to URL if resizing fails
+            return final_url

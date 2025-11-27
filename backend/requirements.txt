@@ -6,3 +6,5 @@ python-multipart
 numpy
 replicate
 python-dotenv
+Pillow
+requests
