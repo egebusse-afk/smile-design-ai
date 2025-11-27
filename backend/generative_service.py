@@ -66,6 +66,17 @@ class GenerativeService:
         image_bytes = base64.b64decode(image_base64)
         base_image = Image.open(io.BytesIO(image_bytes))
         
+        # OOM Protection: Resize if image is too large (max 1280px)
+        max_dimension = 1280
+        if base_image.width > max_dimension or base_image.height > max_dimension:
+            base_image.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
+            print(f"Resized image to {base_image.size} for stability.")
+            
+            # Update image_bytes for VertexImage
+            buf = io.BytesIO()
+            base_image.save(buf, format="PNG")
+            image_bytes = buf.getvalue()
+
         # Convert to Vertex AI Image format
         from vertexai.preview.vision_models import Image as VertexImage
         v_base_image = VertexImage(image_bytes)
@@ -74,6 +85,17 @@ class GenerativeService:
         if mask_base64:
             mask_bytes = base64.b64decode(mask_base64)
             mask_image = Image.open(io.BytesIO(mask_bytes))
+            
+            # Resize mask to match base_image if needed
+            if mask_image.size != base_image.size:
+                mask_image = mask_image.resize(base_image.size, Image.NEAREST)
+                print(f"Resized mask to {mask_image.size} to match image.")
+            
+            # Update mask_bytes for VertexImage
+            mask_buf = io.BytesIO()
+            mask_image.save(mask_buf, format="PNG")
+            mask_bytes = mask_buf.getvalue()
+            
             v_mask_image = VertexImage(mask_bytes)
 
         try:
