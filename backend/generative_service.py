@@ -40,8 +40,8 @@ class GenerativeService:
             }
         )
 
-        # Output is usually a list of URLs
         if output and len(output) > 0:
-            return output[0]
+            # Ensure we return a string (URL)
+            return str(output[0])
         else:
             raise ValueError("No output generated from Replicate.")
