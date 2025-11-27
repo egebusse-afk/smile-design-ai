@@ -12,3 +12,4 @@ sqlalchemy
 python-jose[cryptography]
 passlib[bcrypt]
 google-cloud-aiplatform
+psycopg2-binary
