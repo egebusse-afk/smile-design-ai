@@ -1,22 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 15, 23, 42; /* Slate 900 */
-  --background-end-rgb: 2, 6, 23;    /* Slate 950 */
+  --background: #020617; /* Slate 950 */
+  --foreground: #f8fafc; /* Slate 50 */
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
   background: linear-gradient(
       to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
+      #020617
     )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+    #0f172a; /* Slate 900 start */
 }
 
 @layer utilities {
@@ -31,11 +35,15 @@ body {
     background: linear-gradient(to right, #fbbf24, #d97706);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
   }
 
   .text-gradient-blue {
     background: linear-gradient(to right, #60a5fa, #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
   }
 }
