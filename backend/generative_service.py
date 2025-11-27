@@ -1,13 +1,6 @@
-import os
-import base64
-import io
-from PIL import Image
-from dotenv import load_dotenv
-import vertexai
-from vertexai.preview.vision_models import ImageGenerationModel
-from google.oauth2 import service_account
+import json
 
-load_dotenv()
+# ... (imports)
 
 class GenerativeService:
     def __init__(self):
@@ -16,15 +9,28 @@ class GenerativeService:
         self.location = "us-central1" # Or 'europe-west1' if enabled there
         
         # Load credentials
-        # Handle path whether running from root or backend dir
+        # Priority 1: Environment Variable (Production)
+        json_creds = os.getenv("GOOGLE_CREDENTIALS_JSON")
+        
+        # Priority 2: File (Local Development)
         base_dir = os.path.dirname(os.path.abspath(__file__))
         cred_path = os.path.join(base_dir, "service_account.json")
         
-        if os.path.exists(cred_path):
+        if json_creds:
+            try:
+                info = json.loads(json_creds)
+                self.credentials = service_account.Credentials.from_service_account_info(info)
+                vertexai.init(project=self.project_id, location=self.location, credentials=self.credentials)
+                print("Vertex AI Initialized from Environment Variable.")
+            except Exception as e:
+                print(f"Failed to load credentials from ENV: {e}")
+                self.model = None
+                return
+        elif os.path.exists(cred_path):
             self.credentials = service_account.Credentials.from_service_account_file(cred_path)
             vertexai.init(project=self.project_id, location=self.location, credentials=self.credentials)
         else:
-            print("Warning: service_account.json not found. Vertex AI might fail if not running in GCP environment.")
+            print("Warning: Credentials not found. Vertex AI might fail.")
             # Fallback to default credentials if available
             vertexai.init(project=self.project_id, location=self.location)
 
