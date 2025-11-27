@@ -1,0 +1,30 @@
+services:
+  # Backend Service (Python/FastAPI)
+  - type: web
+    name: smile-design-backend
+    runtime: docker
+    rootDir: backend
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: REPLICATE_API_TOKEN
+        sync: false
+    # Docker runtime uses the Dockerfile in rootDir (backend/Dockerfile)
+
+  # Frontend Service (Next.js)
+  - type: web
+    name: smile-design-frontend
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.9.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: smile-design-backend
+          property: url
