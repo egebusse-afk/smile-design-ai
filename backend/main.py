@@ -125,13 +125,14 @@ async def generate_smile(
         image_data = request.image.split(",")[1] if "," in request.image else request.image
         mask_data = request.mask.split(",")[1] if "," in request.mask else request.mask
         
-        # Construct V2.0 Prompt
         full_prompt = f"""
-High quality dental photography of a person smiling. 
-The image should be photorealistic, 8k resolution, captured with a macro lens.
-Focus on the teeth: {request.style_prompt if request.style_prompt else "Natural healthy teeth, standard white shade"}.
-Details: {request.expert_prompt if request.expert_prompt else "Perfect anatomical fit, realistic texture, natural light reflections."}
-Keep the face, skin, and lips exactly as they are. Only enhance the smile.
+Create a high-end aesthetic dental smile design.
+Subject: Close-up of a person smiling.
+Task: Replace the teeth with high-quality porcelain laminate veneers.
+Material Details: {request.style_prompt if request.style_prompt else "Natural ivory white, translucent enamel texture, realistic light reflection, premium ceramic look."}
+Anatomy: {request.expert_prompt if request.expert_prompt else "Perfect alignment, golden ratio proportions, natural gum line integration."}
+Integration: Harmonize the lip structure with the new teeth. Subtly adjust the lip line if necessary for a perfect anatomical fit. Ensure the teeth look like they belong in the mouth, not pasted on.
+Lighting: Soft, professional dental photography lighting.
 """
         # If legacy prompt is provided and no new fields, fallback to it (or append it)
         if request.prompt and not request.style_prompt:

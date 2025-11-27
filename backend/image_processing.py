@@ -57,8 +57,9 @@ class ImageProcessor:
         cv2.fillPoly(mask, [points], 255)
         
         # Smart Masking Improvements:
-        # 1. Dilate the mask to include the lips/gum edges slightly for better blending
-        kernel = np.ones((15, 15), np.uint8) # Increased kernel size for better coverage
+        # 1. Dilate the mask significantly to include the lips and gum line.
+        # This allows the AI to "harmonize" the lips with the new teeth and ensures a seamless blend.
+        kernel = np.ones((40, 40), np.uint8) # Increased from 15 to 40 to cover lips
         mask = cv2.dilate(mask, kernel, iterations=1)
         
         # 2. Blur the edges for soft transition
