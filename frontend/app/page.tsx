@@ -392,7 +392,7 @@ export default function Home() {
                         {/* Right: Comparison */}
                         <div className="w-full md:w-2/3">
                             <div className="glass-panel p-2 rounded-3xl overflow-hidden shadow-2xl">
-                                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
+                                <div className="relative w-full h-auto rounded-2xl overflow-hidden">
                                     <ReactCompareImage 
                                         leftImage={selectedImage} 
                                         rightImage={generatedImage} 
