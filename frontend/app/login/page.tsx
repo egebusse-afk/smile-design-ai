@@ -33,7 +33,17 @@ export default function Login() {
           body: formData,
         });
 
-        if (!res.ok) throw new Error('Giriş başarısız. Bilgilerinizi kontrol edin.');
+        if (!res.ok) {
+            let errorMessage = 'Giriş başarısız. Bilgilerinizi kontrol edin.';
+            try {
+                // Try to parse JSON error if available
+                const errData = await res.json();
+                if (errData.detail) errorMessage = errData.detail;
+            } catch (e) {
+                 console.error('Login error (non-JSON):', await res.text());
+            }
+            throw new Error(errorMessage);
+        }
 
         const data = await res.json();
         localStorage.setItem('token', data.access_token);
@@ -47,8 +57,17 @@ export default function Login() {
         });
 
         if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.detail || 'Kayıt başarısız.');
+            let errorMessage = 'Kayıt başarısız.';
+            try {
+                const errData = await res.json();
+                errorMessage = errData.detail || errorMessage;
+            } catch (e) {
+                // If response is not JSON (e.g. 500 HTML page), read as text
+                const text = await res.text();
+                console.error('Registration error (non-JSON):', text);
+                errorMessage = `Sunucu hatası: ${res.status}`;
+            }
+            throw new Error(errorMessage);
         }
 
         // Auto login after register
@@ -108,6 +127,7 @@ export default function Login() {
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     placeholder="Adınız Soyadınız"
+                    autoComplete="name"
                   />
                 </div>
               </div>
@@ -124,6 +144,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="ornek@email.com"
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -139,6 +160,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="••••••••"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                 />
               </div>
             </div>

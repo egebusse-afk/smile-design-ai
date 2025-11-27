@@ -49,7 +49,7 @@ from pydantic import BaseModel, Field
 
 class UserCreate(BaseModel):
     email: str
-    password: str = Field(..., max_length=72, description="Password must be less than 72 bytes")
+    password: str = Field(..., description="Password")
     full_name: Optional[str] = None
 
 class Token(BaseModel):
