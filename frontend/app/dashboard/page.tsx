@@ -105,19 +105,13 @@ export default function Dashboard() {
         formData.append('file', file);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
         
-        // Step 1: Generate Mask
-        const maskResponse = await fetch(`${apiUrl}/generate-mask`, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!maskResponse.ok) throw new Error('Maskeleme başarısız.');
-        const maskData = await maskResponse.json();
-        const newMaskedImage = `data:image/png;base64,${maskData.mask}`;
-        setMaskedImage(newMaskedImage);
+        // Step 1: Skip Mask Generation (User Request: Let AI handle it)
+        // We set maskedImage to null or empty to signal backend to use mask-free editing
+        const newMaskedImage = null; 
+        setMaskedImage(null);
 
         // Step 2: Auto-Generate Smile
-        setProcessingStage('Google Vertex AI ile yeni gülüş tasarlanıyor...');
+        setProcessingStage('Google Vertex AI ile yeni gülüş tasarlanıyor (Maskesiz Mod)...');
         
         const token = localStorage.getItem('token');
         const materialPrompt = MATERIALS.find(m => m.id === selectedMaterial)?.prompt;

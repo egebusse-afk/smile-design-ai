@@ -56,7 +56,7 @@ class GenerativeService:
                 print(f"Failed to load Imagen 2 model: {e2}")
                 self.model = None
 
-    def generate_smile(self, image_base64: str, mask_base64: str, prompt: str, negative_prompt: str = "") -> str:
+    def generate_smile(self, image_base64: str, mask_base64: str = None, prompt: str = "", negative_prompt: str = "") -> str:
         if not self.model:
             raise ValueError("Vertex AI Model not initialized.")
 
@@ -64,35 +64,27 @@ class GenerativeService:
 
         # Decode images
         image_bytes = base64.b64decode(image_base64)
-        mask_bytes = base64.b64decode(mask_base64)
-        
         base_image = Image.open(io.BytesIO(image_bytes))
-        mask_image = Image.open(io.BytesIO(mask_bytes))
-
-        # Vertex AI expects the mask to be the area to EDIT (white = edit, black = keep).
-        # Our mask generation logic (ImageProcessor) produces white for mouth, black for face.
-        # So it should be compatible directly.
         
         # Convert to Vertex AI Image format
         from vertexai.preview.vision_models import Image as VertexImage
-        
-        # Save to temp buffers to create VertexImage objects (sdk requires path or bytes)
-        # We can pass bytes directly if supported, but let's be safe with what the SDK expects usually
-        # The SDK `edit_image` takes `base_image` and `mask` as `VertexImage` objects.
-        
         v_base_image = VertexImage(image_bytes)
-        v_mask_image = VertexImage(mask_bytes)
-
-        # Construct the full prompt based on User's request structure
-        # The `prompt` argument coming in will be the constructed prompt from main.py
         
+        v_mask_image = None
+        if mask_base64:
+            mask_bytes = base64.b64decode(mask_base64)
+            mask_image = Image.open(io.BytesIO(mask_bytes))
+            v_mask_image = VertexImage(mask_bytes)
+
         try:
+            # Edit Image
+            # If mask is provided, use it. If not, use mask-free editing (instruction-based).
             response = self.model.edit_image(
                 base_image=v_base_image,
-                mask=v_mask_image,
+                mask=v_mask_image, # Can be None for mask-free editing
                 prompt=prompt,
                 negative_prompt=negative_prompt or "fake, sticker, pasted on, cartoon, illustration, low quality, blur, distorted lips, bad anatomy, extra teeth, metal, braces",
-                guidance_scale=20, # Reduced from 60 to prevent artifacts
+                guidance_scale=20, 
                 number_of_images=1,
                 seed=None
             )
@@ -106,21 +98,21 @@ class GenerativeService:
                 else:
                     raise ValueError("Generated image does not contain bytes data.")
 
-                # High-Res Blending Logic
-                # 1. Resize generated image to match original base_image size (if different)
-                if gen_img_pil.size != base_image.size:
-                    gen_img_pil = gen_img_pil.resize(base_image.size, Image.LANCZOS)
+                # If we used a mask, we do High-Res Blending.
+                # If we did NOT use a mask (mask-free), we return the generated image directly
+                # because the AI edited the whole image (or parts of it) and we don't have a mask to blend back.
+                if mask_base64:
+                    # High-Res Blending Logic
+                    if gen_img_pil.size != base_image.size:
+                        gen_img_pil = gen_img_pil.resize(base_image.size, Image.LANCZOS)
 
-                # 2. Blur the mask slightly for seamless blending
-                # We use the original mask_image (which is black/white)
-                # Convert mask to L mode (grayscale)
-                mask_pil = mask_image.convert('L')
+                    mask_pil = mask_image.convert('L')
+                    final_image = Image.composite(gen_img_pil, base_image, mask_pil)
+                else:
+                    # Mask-Free: Return result directly (AI handled blending)
+                    final_image = gen_img_pil
                 
-                # 3. Composite: Paste generated teeth onto original image using the mask
-                # This ensures the rest of the face (skin, beard, eyes) remains 100% original high-res
-                final_image = Image.composite(gen_img_pil, base_image, mask_pil)
-                
-                # 4. Convert result to base64
+                # Convert result to base64
                 output_buffer = io.BytesIO()
                 final_image.save(output_buffer, format="PNG")
                 output_base64 = base64.b64encode(output_buffer.getvalue()).decode('utf-8')
