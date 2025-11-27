@@ -1,6 +1,14 @@
+import os
+import base64
+import io
 import json
+from PIL import Image
+from dotenv import load_dotenv
+import vertexai
+from vertexai.preview.vision_models import ImageGenerationModel
+from google.oauth2 import service_account
 
-# ... (imports)
+load_dotenv()
 
 class GenerativeService:
     def __init__(self):
