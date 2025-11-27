@@ -12,7 +12,7 @@ ENV NEXT_PUBLIC_API_URL=""
 RUN npm run build
 
 # Stage 2: Build Backend & Serve
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
