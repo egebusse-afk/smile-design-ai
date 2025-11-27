@@ -53,7 +53,16 @@ class ImageProcessor:
         points = points.reshape((-1, 1, 2))
         
         # Fill the polygon (mouth area) with white (255)
+        # Fill the polygon (mouth area) with white (255)
         cv2.fillPoly(mask, [points], 255)
+        
+        # Smart Masking Improvements:
+        # 1. Dilate the mask to include the lips/gum edges slightly for better blending
+        kernel = np.ones((15, 15), np.uint8) # Increased kernel size for better coverage
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        
+        # 2. Blur the edges for soft transition
+        mask = cv2.GaussianBlur(mask, (21, 21), 0)
         
         # Encode mask to base64
         _, buffer = cv2.imencode('.png', mask)

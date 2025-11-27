@@ -184,30 +184,37 @@ export default function Home() {
             <div className="flex flex-col items-center gap-4">
                 <div className="flex gap-2">
                     <button 
-                        onClick={() => setPrompt("perfect white teeth, natural smile")}
-                        className={`px-4 py-2 rounded-full text-sm ${prompt === "perfect white teeth, natural smile" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
+                        onClick={() => setPrompt("perfect white teeth, natural smile, detailed anatomy")}
+                        className={`px-4 py-2 rounded-full text-sm ${prompt.includes("natural smile") ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
                     >
-                        Natural White
+                        Natural
                     </button>
                     <button 
-                        onClick={() => setPrompt("hollywood smile, bright white teeth, perfect alignment")}
-                        className={`px-4 py-2 rounded-full text-sm ${prompt === "hollywood smile, bright white teeth, perfect alignment" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
+                        onClick={() => setPrompt("hollywood smile, bright white teeth, perfect alignment, celebrity look")}
+                        className={`px-4 py-2 rounded-full text-sm ${prompt.includes("hollywood smile") ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
                     >
-                        Hollywood Smile
+                        Hollywood
                     </button>
                     <button 
-                        onClick={() => setPrompt("natural teeth, slightly imperfect, realistic texture")}
-                        className={`px-4 py-2 rounded-full text-sm ${prompt === "natural teeth, slightly imperfect, realistic texture" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
+                        onClick={() => setPrompt("zirconium teeth, translucent enamel, perfect white, high end dental work")}
+                        className={`px-4 py-2 rounded-full text-sm ${prompt.includes("zirconium") ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
                     >
-                        Realistic
+                        Zirconium
                     </button>
                 </div>
+                
+                {isLoading && (
+                    <div className="text-blue-600 text-sm font-medium animate-pulse">
+                        ✨ Yapay zeka gülüşünüzü tasarlıyor... (Yüksek kalite için ~20sn sürebilir)
+                    </div>
+                )}
+
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !maskedImage}
                     className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full font-bold text-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
                 >
-                    {isLoading ? <Loader2 className="animate-spin" /> : "Generate New Smile"}
+                    {isLoading ? <Loader2 className="animate-spin" /> : "Generate New Smile (Pro)"}
                 </button>
             </div>
         )}

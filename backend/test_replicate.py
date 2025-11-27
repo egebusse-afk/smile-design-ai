@@ -37,6 +37,7 @@ try:
     )
     print(f"Prediction success! Output: {output}")
 
+except replicate.exceptions.ReplicateError as e:
     print(f"Replicate Error: {e}")
 except Exception as e:
     print(f"Unexpected Error: {e}")
