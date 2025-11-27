@@ -2,8 +2,7 @@ services:
   - type: web
     name: smile-design-ai
     runtime: docker
-    rootDir: . # Root directory is now . because Dockerfile needs access to both frontend and backend
-    dockerfilePath: backend/Dockerfile
+    rootDir: .
     plan: free
     envVars:
       - key: PYTHON_VERSION
