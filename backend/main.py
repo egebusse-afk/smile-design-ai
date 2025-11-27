@@ -124,9 +124,7 @@ async def generate_smile(
         # Remove header if present
         image_data = request.image.split(",")[1] if "," in request.image else request.image
         
-        mask_data = None
-        if request.mask:
-            mask_data = request.mask.split(",")[1] if "," in request.mask else request.mask
+        mask_data = request.mask.split(",")[1] if "," in request.mask else request.mask
         
         full_prompt = f"""
 Act as an expert dental aesthetician and professional photographer.
