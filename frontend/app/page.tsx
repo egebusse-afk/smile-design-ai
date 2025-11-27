@@ -31,7 +31,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
       const response = await fetch(`${apiUrl}/generate-mask`, {
         method: 'POST',
         body: formData,
@@ -58,7 +58,7 @@ export default function Home() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
       const response = await fetch(`${apiUrl}/generate-smile`, {
         method: 'POST',
         headers: {
