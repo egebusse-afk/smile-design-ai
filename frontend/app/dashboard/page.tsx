@@ -98,13 +98,14 @@ export default function Dashboard() {
     setMaskedImage(null);
     setGeneratedImage(null);
     setIsProcessing(true);
-    setProcessingStage('Yüz taranıyor ve maske oluşturuluyor...');
+    setProcessingStage('Yüz taranıyor ve analiz ediliyor...');
 
     try {
         const formData = new FormData();
         formData.append('file', file);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
         
+        // Step 1: Generate Mask
         const maskResponse = await fetch(`${apiUrl}/generate-mask`, {
             method: 'POST',
             body: formData,
@@ -112,12 +113,63 @@ export default function Dashboard() {
 
         if (!maskResponse.ok) throw new Error('Maskeleme başarısız.');
         const maskData = await maskResponse.json();
-        setMaskedImage(`data:image/png;base64,${maskData.mask}`);
-        setIsProcessing(false);
+        const newMaskedImage = `data:image/png;base64,${maskData.mask}`;
+        setMaskedImage(newMaskedImage);
+
+        // Step 2: Auto-Generate Smile
+        setProcessingStage('Google Vertex AI ile yeni gülüş tasarlanıyor...');
+        
+        const token = localStorage.getItem('token');
+        const materialPrompt = MATERIALS.find(m => m.id === selectedMaterial)?.prompt;
+
+        // Use the newly read image data directly or wait for state? 
+        // Better to use the file reader result or just pass the file again?
+        // Actually, we need the base64 string for the API.
+        // Since FileReader is async, let's wait for it or use a promise wrapper.
+        // A simpler way: we already have the file, let's read it to base64 synchronously-ish or just wait.
+        
+        // Let's use a helper to get base64 from file to be sure
+        const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+
+        const base64Image = await toBase64(file);
+
+        const response = await fetch(`${apiUrl}/generate-smile`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                image: base64Image,
+                mask: newMaskedImage,
+                style_prompt: materialPrompt,
+                expert_prompt: expertNotes
+            }),
+        });
+
+        if (!response.ok) throw new Error('Üretim başarısız.');
+        const data = await response.json();
+        setGeneratedImage(data.image_url);
+        
+        // Refresh history
+        const historyRes = await fetch(`${apiUrl}/history`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (historyRes.ok) {
+            const historyData = await historyRes.json();
+            setGenerations(historyData);
+        }
+
     } catch (error) {
         console.error(error);
+        alert("İşlem sırasında bir hata oluştu.");
+    } finally {
         setIsProcessing(false);
-        alert("Maskeleme sırasında hata oluştu.");
     }
   };
 
