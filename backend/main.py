@@ -172,3 +172,10 @@ async def read_index():
 async def health_check():
     return {"status": "healthy"}
 
+# Catch-all for SPA (Must be last)
+@app.get("/{full_path:path}")
+async def catch_all(full_path: str):
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    return {"message": "Frontend not found"}
+
