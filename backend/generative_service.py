@@ -84,7 +84,7 @@ class GenerativeService:
                 base_image=v_base_image,
                 mask=v_mask_image,
                 prompt=prompt,
-                negative_prompt=negative_prompt or "bad anatomy, distorted, blur, noise, cartoon, low quality",
+                negative_prompt=negative_prompt or "fake, sticker, pasted on, cartoon, illustration, low quality, blur, distorted lips, bad anatomy, extra teeth, metal, braces",
                 guidance_scale=20, # Reduced from 60 to prevent artifacts
                 number_of_images=1,
                 seed=None
