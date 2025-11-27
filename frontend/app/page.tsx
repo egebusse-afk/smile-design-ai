@@ -1,14 +1,25 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Camera, ArrowRight, Check, Sparkles, Download, Share2, RefreshCw, ChevronRight } from 'lucide-react';
+import { Upload, Camera, ArrowRight, Check, Sparkles, Download, Share2, RefreshCw, ChevronRight, User } from 'lucide-react';
 import ReactCompareImage from 'react-compare-image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function Home() {
+  const router = useRouter();
   // State for Wizard Flow
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1: Hero, 2: Upload, 3: Processing, 4: Result
   
+  // Auth State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
+
   // Data State
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [maskedImage, setMaskedImage] = useState<string | null>(null);
@@ -33,7 +44,13 @@ export default function Home() {
 
   // --- Handlers ---
 
-  const handleStart = () => setStep(2);
+  const handleStart = () => {
+    if (isLoggedIn) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement> | { target: { files: File[] } }) => {
     const file = e.target.files?.[0];
@@ -75,9 +92,13 @@ export default function Home() {
       // 2. Generate Smile (Auto-trigger after mask)
       // We wait a bit to let the user see the "Processing" stages
       
+      const token = localStorage.getItem('token');
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const generateResponse = await fetch(`${apiUrl}/generate-smile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({
           image: await new Promise<string>((resolve) => {
              const r = new FileReader();
@@ -115,9 +136,13 @@ export default function Home() {
       
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+        const token = localStorage.getItem('token');
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const response = await fetch(`${apiUrl}/generate-smile`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({
             image: selectedImage,
             mask: maskedImage,
@@ -182,14 +207,23 @@ export default function Home() {
               <Sparkles className="w-6 h-6 text-amber-400" />
               <span className="text-xl font-bold tracking-tight">SmileBot<span className="text-blue-400">.ai</span></span>
             </div>
-            <div className="hidden md:block">
+            <div className="hidden md:flex items-center gap-4">
                 <span className="text-sm text-slate-400">Premium Dental AI</span>
+                {isLoggedIn ? (
+                  <Link href="/dashboard" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
+                    Dashboard
+                  </Link>
+                ) : (
+                  <Link href="/login" className="text-sm font-medium text-white hover:text-blue-400 transition-colors">
+                    Giriş Yap
+                  </Link>
+                )}
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <main className="pt-20 md:pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
             
             {/* STEP 1: HERO */}
@@ -206,7 +240,7 @@ export default function Home() {
                         Yeni Nesil Yapay Zeka Teknolojisi
                     </div>
                     
-                    <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
                         Mükemmel Gülüşünüzü <br />
                         <span className="text-gradient-blue">Saniyeler İçinde</span> Tasarlayın
                     </h1>
@@ -218,30 +252,30 @@ export default function Home() {
                     
                     <button 
                         onClick={handleStart}
-                        className="group relative px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-full text-lg font-bold transition-all hover:scale-105 hover:shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)]"
+                        className="group relative px-6 py-3 md:px-8 md:py-4 bg-blue-600 hover:bg-blue-500 rounded-full text-base md:text-lg font-bold transition-all hover:scale-105 hover:shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)]"
                     >
                         <span className="flex items-center gap-2">
-                            Ücretsiz Dene <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            {isLoggedIn ? 'Dashboard\'a Git' : 'Ücretsiz Dene'} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </span>
                     </button>
                     
                     {/* Trust Indicators */}
-                    <div className="pt-12 grid grid-cols-3 gap-8 text-slate-500 text-sm font-medium">
-                        <div className="flex flex-col items-center gap-2">
-                            <div className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-blue-400">
-                                <Camera className="w-6 h-6" />
+                    <div className="pt-8 md:pt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 text-slate-500 text-sm font-medium">
+                        <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-2 bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl sm:rounded-none">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl glass-panel flex items-center justify-center text-blue-400">
+                                <Camera className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
                             <span>Kolay Kullanım</span>
                         </div>
-                        <div className="flex flex-col items-center gap-2">
-                            <div className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-amber-400">
-                                <Sparkles className="w-6 h-6" />
+                        <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-2 bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl sm:rounded-none">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl glass-panel flex items-center justify-center text-amber-400">
+                                <Sparkles className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
                             <span>AI Destekli</span>
                         </div>
-                        <div className="flex flex-col items-center gap-2">
-                            <div className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-green-400">
-                                <Check className="w-6 h-6" />
+                        <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-2 bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl sm:rounded-none">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl glass-panel flex items-center justify-center text-green-400">
+                                <Check className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
                             <span>Anında Sonuç</span>
                         </div>
@@ -258,8 +292,8 @@ export default function Home() {
                     exit={{ opacity: 0, scale: 1.05 }}
                     className="max-w-2xl mx-auto mt-12"
                 >
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-bold mb-2">Fotoğrafınızı Yükleyin</h2>
+                    <div className="text-center mb-6 md:mb-8">
+                        <h2 className="text-2xl md:text-3xl font-bold mb-2">Fotoğrafınızı Yükleyin</h2>
                         <p className="text-slate-400">Net, aydınlık ve dişlerin göründüğü bir fotoğraf seçin.</p>
                     </div>
 
@@ -270,11 +304,11 @@ export default function Home() {
                             accept="image/*"
                             onChange={handleImageUpload}
                         />
-                        <div className="flex flex-col items-center justify-center py-12 space-y-4 group-hover:scale-105 transition-transform duration-300">
-                            <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                <Upload className="w-10 h-10" />
+                        <div className="flex flex-col items-center justify-center py-8 md:py-12 space-y-4 group-hover:scale-105 transition-transform duration-300">
+                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 mb-2 md:mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                <Upload className="w-8 h-8 md:w-10 md:h-10" />
                             </div>
-                            <h3 className="text-xl font-semibold">Fotoğrafı Sürükleyin veya Seçin</h3>
+                            <h3 className="text-lg md:text-xl font-semibold text-center px-4">Fotoğrafı Sürükleyin veya Seçin</h3>
                             <p className="text-sm text-slate-500">JPG, PNG formatları desteklenir</p>
                         </div>
                     </div>
@@ -405,7 +439,7 @@ export default function Home() {
                                 </div>
                             </div>
                             
-                            <div className="mt-6 flex justify-center gap-4">
+                            <div className="mt-6 flex flex-col sm:flex-row justify-center gap-4">
                                 <a 
                                     href={generatedImage} 
                                     download="smile-design.png"
@@ -437,10 +471,10 @@ export default function Home() {
                         <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                         <canvas ref={canvasRef} className="hidden" />
                     </div>
-                    <div className="p-6 flex justify-between items-center bg-slate-800">
-                        <button onClick={() => setShowCamera(false)} className="px-6 py-2 text-slate-300 hover:text-white font-medium">İptal</button>
-                        <button onClick={takePhoto} className="px-8 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 font-medium flex items-center gap-2">
-                            <Camera className="w-5 h-5" /> Çek
+                    <div className="p-4 md:p-6 flex justify-between items-center bg-slate-800">
+                        <button onClick={() => setShowCamera(false)} className="px-4 py-2 md:px-6 text-slate-300 hover:text-white font-medium text-sm md:text-base">İptal</button>
+                        <button onClick={takePhoto} className="px-6 py-2 md:px-8 md:py-3 bg-blue-600 text-white rounded-full hover:bg-blue-500 font-medium flex items-center gap-2 text-sm md:text-base">
+                            <Camera className="w-4 h-4 md:w-5 md:h-5" /> Çek
                         </button>
                     </div>
                 </div>
@@ -451,3 +485,4 @@ export default function Home() {
     </div>
   );
 }
+

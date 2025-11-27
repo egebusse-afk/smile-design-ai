@@ -1,126 +1,96 @@
-import replicate
 import os
-from dotenv import load_dotenv
 import base64
 import io
-import requests
-import time
-import random
 from PIL import Image
+from dotenv import load_dotenv
+import vertexai
+from vertexai.preview.vision_models import ImageGenerationModel
+from google.oauth2 import service_account
 
 load_dotenv()
 
 class GenerativeService:
     def __init__(self):
-        self.api_token = os.getenv("REPLICATE_API_TOKEN")
-        if not self.api_token:
-            print("Warning: REPLICATE_API_TOKEN not found in environment variables.")
-
-    def _run_with_retry(self, model_id, input_data, max_retries=3):
-        """
-        Runs a Replicate model with exponential backoff retry logic for 429 errors.
-        """
-        for attempt in range(max_retries):
-            try:
-                output = replicate.run(model_id, input=input_data)
-                return output
-            except replicate.exceptions.ReplicateError as e:
-                # Check for rate limit error
-                if "429" in str(e) and attempt < max_retries - 1:
-                    # Exponential backoff: 2s, 4s, 8s + jitter
-                    wait_time = (2 ** (attempt + 1)) + random.uniform(0, 1)
-                    print(f"Rate limit hit (429) for {model_id}. Retrying in {wait_time:.2f}s... (Attempt {attempt + 1}/{max_retries})")
-                    time.sleep(wait_time)
-                    continue
-                raise e
-        return None
-
-    def generate_smile(self, image_base64: str, mask_base64: str, prompt: str) -> str:
-        if not self.api_token:
-            raise ValueError("Replicate API token is missing. Please set REPLICATE_API_TOKEN in .env file.")
-
-        # Step 1: Inpainting with SDXL
-        print("Starting Step 1: SDXL Inpainting...")
+        # Initialize Vertex AI
+        self.project_id = "gulus-tasarimi"
+        self.location = "us-central1" # Or 'europe-west1' if enabled there
         
-        input_data_sdxl = {
-            "image": f"data:image/png;base64,{image_base64}",
-            "mask": f"data:image/png;base64,{mask_base64}",
-            "prompt": f"{prompt}, high quality, realistic, 8k, detailed texture, dental photography",
-            "negative_prompt": "blur, noise, distortion, low quality, ugly, bad anatomy, extra teeth, missing teeth, cartoon, drawing",
-            "num_inference_steps": 30,
-            "guidance_scale": 7.5,
-            "strength": 0.99
-        }
-
-        inpainted_output = self._run_with_retry(
-            "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-            input_data_sdxl
-        )
-
-        if not inpainted_output:
-             raise ValueError("Inpainting failed to generate output.")
+        # Load credentials
+        # Handle path whether running from root or backend dir
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        cred_path = os.path.join(base_dir, "service_account.json")
         
-        # SDXL returns a list of URLs usually
-        if isinstance(inpainted_output, list):
-            inpainted_image_url = str(inpainted_output[0])
+        if os.path.exists(cred_path):
+            self.credentials = service_account.Credentials.from_service_account_file(cred_path)
+            vertexai.init(project=self.project_id, location=self.location, credentials=self.credentials)
         else:
-            inpainted_image_url = str(inpainted_output)
-            
-        print(f"Inpainting Complete: {inpainted_image_url}")
+            print("Warning: service_account.json not found. Vertex AI might fail if not running in GCP environment.")
+            # Fallback to default credentials if available
+            vertexai.init(project=self.project_id, location=self.location)
 
-        # Step 2: Face Restoration (CodeFormer)
-        print("Starting Step 2: Face Restoration...")
+        # Load Model (Imagen 2 or 3)
+        try:
+            self.model = ImageGenerationModel.from_pretrained("imagegeneration@006") # Imagen 2
+        except Exception as e:
+            print(f"Failed to load Imagen model: {e}")
+            self.model = None
+
+    def generate_smile(self, image_base64: str, mask_base64: str, prompt: str, negative_prompt: str = "") -> str:
+        if not self.model:
+            raise ValueError("Vertex AI Model not initialized.")
+
+        print(f"Generating smile with prompt: {prompt}")
+
+        # Decode images
+        image_bytes = base64.b64decode(image_base64)
+        mask_bytes = base64.b64decode(mask_base64)
         
-        # Add a small delay before step 2 to be safe
-        time.sleep(1)
+        base_image = Image.open(io.BytesIO(image_bytes))
+        mask_image = Image.open(io.BytesIO(mask_bytes))
+
+        # Vertex AI expects the mask to be the area to EDIT (white = edit, black = keep).
+        # Our mask generation logic (ImageProcessor) produces white for mouth, black for face.
+        # So it should be compatible directly.
+        
+        # Convert to Vertex AI Image format
+        from vertexai.preview.vision_models import Image as VertexImage
+        
+        # Save to temp buffers to create VertexImage objects (sdk requires path or bytes)
+        # We can pass bytes directly if supported, but let's be safe with what the SDK expects usually
+        # The SDK `edit_image` takes `base_image` and `mask` as `VertexImage` objects.
+        
+        v_base_image = VertexImage(image_bytes)
+        v_mask_image = VertexImage(mask_bytes)
+
+        # Construct the full prompt based on User's request structure
+        # The `prompt` argument coming in will be the constructed prompt from main.py
         
         try:
-            input_data_codeformer = {
-                "image": inpainted_image_url,
-                "codeformer_fidelity": 0.7,
-                "background_enhance": False,
-                "face_upsample": True,
-                "upscale": 1
-            }
-            
-            restored_output = self._run_with_retry(
-                "sczhou/codeformer:7de2ea26c616d5bf2245ad0d5e24f0ff9a6204578a5c876db53142edd9d2cd56",
-                input_data_codeformer
+            response = self.model.edit_image(
+                base_image=v_base_image,
+                mask=v_mask_image,
+                prompt=prompt,
+                negative_prompt=negative_prompt or "bad anatomy, distorted, blur, noise, cartoon, low quality",
+                guidance_scale=60, # Higher guidance for better adherence to prompt
+                number_of_images=1,
+                seed=None
             )
             
-            if restored_output:
-                final_url = str(restored_output)
+            if response.images:
+                generated_image = response.images[0]
+                
+                # Convert back to base64
+                # VertexImage has ._image_bytes or we can save to buffer
+                # The response object is GeneratedImage
+                
+                output_buffer = io.BytesIO()
+                generated_image.save(output_buffer, include_generation_parameters=False)
+                output_base64 = base64.b64encode(output_buffer.getvalue()).decode('utf-8')
+                
+                return f"data:image/png;base64,{output_base64}"
             else:
-                print("Restoration returned empty, using inpainted image.")
-                final_url = inpainted_image_url
+                raise ValueError("No images generated by Vertex AI.")
                 
         except Exception as e:
-            print(f"Restoration failed after retries: {e}")
-            final_url = inpainted_image_url
-
-        # Step 3: Post-Processing (Resize to original dimensions)
-        try:
-            print(f"Downloading result from {final_url}...")
-            response = requests.get(final_url)
-            response.raise_for_status()
-            
-            generated_img = Image.open(io.BytesIO(response.content))
-            
-            # Get original dimensions from input base64
-            input_img = Image.open(io.BytesIO(base64.b64decode(image_base64)))
-            original_size = input_img.size # (width, height)
-            
-            print(f"Resizing from {generated_img.size} to {original_size}...")
-            generated_img = generated_img.resize(original_size, Image.Resampling.LANCZOS)
-            
-            # Convert back to base64
-            buffer = io.BytesIO()
-            generated_img.save(buffer, format="PNG")
-            final_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            
-            return f"data:image/png;base64,{final_base64}"
-            
-        except Exception as e:
-            print(f"Error in resizing/downloading: {e}")
-            # Fallback to URL if resizing fails
-            return final_url
+            print(f"Vertex AI Generation Error: {e}")
+            raise e

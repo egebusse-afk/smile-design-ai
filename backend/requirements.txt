@@ -8,3 +8,7 @@ replicate
 python-dotenv
 Pillow
 requests
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+google-cloud-aiplatform

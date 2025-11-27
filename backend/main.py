@@ -1,11 +1,22 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from image_processing import ImageProcessor
-from pydantic import BaseModel
-
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import List, Optional
 import os
+import traceback
+
+from database import engine, init_db, get_db, User, Generation
+from auth import get_current_user, create_access_token, get_password_hash, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES
+from image_processing import ImageProcessor
+from generative_service import GenerativeService
+import replicate
+
+# Initialize Database
+init_db()
 
 app = FastAPI(title="Smile Design AI API")
 
@@ -19,46 +30,66 @@ app.add_middleware(
 )
 
 processor = ImageProcessor()
-
-class MaskResponse(BaseModel):
-    mask: str
-    image: str
-    width: int
-    height: int
-
-# Serve static files (Frontend)
-# We will mount the 'static' directory which will contain the exported Next.js app
-if os.path.exists("static"):
-    app.mount("/_next", StaticFiles(directory="static/_next"), name="next")
-    # We don't mount "/" directly to avoid conflict with API routes, 
-    # instead we serve index.html for root and catch-all
-
-@app.get("/")
-async def read_index():
-    if os.path.exists("static/index.html"):
-        return FileResponse("static/index.html")
-    return {"message": "Smile Design AI API is running (Frontend not found)"}
-
-@app.on_event("startup")
-async def startup_event():
-    print("Starting Smile Design AI Backend - Version: Pro Pipeline v1.1 (SDXL+CodeFormer+Resize)")
-    # Create temp directory if it doesn't exist
-    os.makedirs("temp", exist_ok=True)
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-from generative_service import GenerativeService
-
 gen_service = GenerativeService()
+
+# --- Pydantic Models ---
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    full_name: Optional[str] = None
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 class GenerateRequest(BaseModel):
     image: str
     mask: str
-    prompt: str
+    prompt: Optional[str] = None # Legacy prompt
+    style_prompt: Optional[str] = None # New material selection
+    expert_prompt: Optional[str] = None # New expert notes
 
-@app.post("/generate-mask", response_model=MaskResponse)
+class GenerationResponse(BaseModel):
+    id: int
+    image_url: str
+    created_at: str
+
+# --- Auth Routes ---
+
+@app.post("/register", response_model=Token)
+async def register(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = get_password_hash(user.password)
+    new_user = User(email=user.email, hashed_password=hashed_password, full_name=user.full_name)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    access_token = create_access_token(data={"sub": new_user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return {"email": current_user.email, "full_name": current_user.full_name, "id": current_user.id}
+
+# --- Application Routes ---
+
+@app.post("/generate-mask")
 async def generate_mask(file: UploadFile = File(...)):
     try:
         contents = await file.read()
@@ -69,61 +100,75 @@ async def generate_mask(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-import replicate
-
 @app.post("/generate-smile")
-async def generate_smile(request: GenerateRequest):
+async def generate_smile(
+    request: GenerateRequest, 
+    current_user: Optional[User] = Depends(get_current_user), # Optional auth for now, or enforce it
+    db: Session = Depends(get_db)
+):
     try:
-        # Remove header if present (data:image/png;base64,)
+        # Remove header if present
         image_data = request.image.split(",")[1] if "," in request.image else request.image
         mask_data = request.mask.split(",")[1] if "," in request.mask else request.mask
         
-        result_url = gen_service.generate_smile(image_data, mask_data, request.prompt)
+        # Construct V2.0 Prompt
+        full_prompt = f"""
+[ROLE]: You are an expert dental technician and AI artist.
+[TASK]: Edit the provided image. Keep the person's face, lips, skin tone, and identity EXACTLY the same. Only modify the teeth area.
+[STYLE]: {request.style_prompt if request.style_prompt else "Natural healthy teeth, standard white shade"}
+[USER_INSTRUCTION]: {request.expert_prompt if request.expert_prompt else "Ensure perfect anatomical fit."}
+[QUALITY]: 8k resolution, medical dental photography, macro lens, realistic lighting and reflection.
+"""
+        # If legacy prompt is provided and no new fields, fallback to it (or append it)
+        if request.prompt and not request.style_prompt:
+             full_prompt += f"\n[ADDITIONAL]: {request.prompt}"
+
+        # print("Sending Prompt to Vertex AI:\n", full_prompt)
+
+        result_url = gen_service.generate_smile(image_data, mask_data, full_prompt)
+        
+        # Save to history if user is logged in
+        if current_user:
+            new_gen = Generation(
+                user_id=current_user.id,
+                original_image_url="[Base64 Data]", # Placeholder
+                generated_image_url=result_url, # This is now a base64 string from Vertex AI
+                prompt=request.style_prompt or request.prompt or "Custom Design"
+            )
+            db.add(new_gen)
+            db.commit()
+            
         return {"image_url": result_url}
-    except replicate.exceptions.ReplicateError as e:
-        print(f"Replicate API Error: {str(e)}")
-        # Pass the actual error message from Replicate to the frontend
-        raise HTTPException(status_code=429, detail=str(e))
-    except ValueError as e:
-        print(f"ValueError in generate_smile: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        
     except Exception as e:
-        print(f"Error in generate_smile: {str(e)}")
-        import traceback
+        print(f"Error: {str(e)}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/test-replicate")
-async def test_replicate_endpoint():
-    try:
-        import replicate
-        import os
-        
-        token = os.getenv("REPLICATE_API_TOKEN")
-        if not token:
-            return {"status": "error", "message": "REPLICATE_API_TOKEN is missing in environment variables"}
-            
-        # Test connection by fetching the model version
-        model_id = "stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3"
-        # We can't easily get version by ID directly without splitting, so let's just run a lightweight check
-        # or just check if we can list models.
-        
-        # Just checking if we can initialize client and get a model
-        client = replicate.Client(api_token=token)
-        model = client.models.get("stability-ai/stable-diffusion-inpainting")
-        version = model.versions.get("95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3")
-        
-        return {
-            "status": "success", 
-            "message": "Replicate API connection successful", 
-            "model_version": version.id,
-            "token_prefix": token[:4] + "..." if token else "None"
-        }
-    except Exception as e:
-        import traceback
-        traceback_str = traceback.format_exc()
-        return {
-            "status": "error", 
-            "message": str(e),
-            "traceback": traceback_str
-        }
+@app.get("/history", response_model=List[GenerationResponse])
+async def get_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    generations = db.query(Generation).filter(Generation.user_id == current_user.id).order_by(Generation.created_at.desc()).all()
+    return [
+        {
+            "id": gen.id,
+            "image_url": gen.generated_image_url,
+            "created_at": gen.created_at.isoformat()
+        } 
+        for gen in generations
+    ]
+
+# --- Static Files ---
+
+if os.path.exists("static"):
+    app.mount("/_next", StaticFiles(directory="static/_next"), name="next")
+
+@app.get("/")
+async def read_index():
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    return {"message": "Smile Design AI API is running (Frontend not found)"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
