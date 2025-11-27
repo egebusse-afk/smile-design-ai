@@ -3,6 +3,7 @@ services:
     name: smile-design-ai
     runtime: docker
     rootDir: .
+    dockerfilePath: Dockerfile
     plan: free
     envVars:
       - key: PYTHON_VERSION
