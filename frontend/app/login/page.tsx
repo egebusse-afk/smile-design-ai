@@ -157,12 +157,22 @@ export default function Login() {
                   type="password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 72) {
+                        setPassword(e.target.value);
+                    }
+                  }}
+                  maxLength={72}
                   className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                   placeholder="••••••••"
                   autoComplete={isLogin ? "current-password" : "new-password"}
                 />
               </div>
+              {password.length >= 72 && (
+                <p className="text-xs text-amber-500 mt-1 ml-1">
+                  Şifre en fazla 72 karakter olabilir.
+                </p>
+              )}
             </div>
 
             {error && (
