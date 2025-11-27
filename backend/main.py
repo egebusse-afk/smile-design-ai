@@ -126,12 +126,13 @@ async def generate_smile(
         mask_data = request.mask.split(",")[1] if "," in request.mask else request.mask
         
         full_prompt = f"""
-Act as an expert dental aesthetician.
+Act as an expert dental aesthetician and professional photographer.
 Task: Redesign the smile with high-quality porcelain laminate veneers.
-1. Teeth Design: Apply {request.style_prompt if request.style_prompt else "natural ivory white veneers with translucent enamel texture"}. Ensure realistic light reflections and fine surface details.
-2. Lip Harmonization: You MUST adjust the lip structure to fit the new teeth perfectly. Subtly lift the upper lip or reshape the lower lip to create a natural smile line. The teeth must sit naturally behind the lips, not on top of them.
-3. Integration: The result must be indistinguishable from a real photo. Blend the new smile seamlessly with the facial expression and beard.
-4. Details: {request.expert_prompt if request.expert_prompt else "Perfect anatomical fit, golden ratio proportions."}
+1. Camera & Lighting: Macro dental photography, 100mm macro lens, soft studio lighting, 8k resolution, hyperrealistic texture.
+2. Teeth Design: Apply {request.style_prompt if request.style_prompt else "natural ivory white veneers with translucent enamel texture"}. Ensure realistic light reflections, slight surface texture (perikymata), and natural optical properties.
+3. Lip Harmonization: You MUST adjust the lip structure to fit the new teeth perfectly. Subtly lift the upper lip or reshape the lower lip to create a natural smile line. The teeth must sit naturally behind the lips, not on top of them.
+4. Integration: The result must be indistinguishable from a real photo. Blend the new smile seamlessly with the facial expression and beard.
+5. Details: {request.expert_prompt if request.expert_prompt else "Perfect anatomical fit, golden ratio proportions, healthy pink gingiva."}
 """
         # If legacy prompt is provided and no new fields, fallback to it (or append it)
         if request.prompt and not request.style_prompt:

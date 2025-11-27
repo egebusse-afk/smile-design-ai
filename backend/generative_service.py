@@ -42,12 +42,19 @@ class GenerativeService:
             # Fallback to default credentials if available
             vertexai.init(project=self.project_id, location=self.location)
 
-        # Load Model (Imagen 2 or 3)
+        # Load Model (Imagen 3 with fallback to Imagen 2)
         try:
-            self.model = ImageGenerationModel.from_pretrained("imagegeneration@006") # Imagen 2
+            # Try loading Imagen 3 first (latest and greatest)
+            self.model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
+            print("Successfully loaded Imagen 3 model.")
         except Exception as e:
-            print(f"Failed to load Imagen model: {e}")
-            self.model = None
+            print(f"Failed to load Imagen 3: {e}. Falling back to Imagen 2...")
+            try:
+                self.model = ImageGenerationModel.from_pretrained("imagegeneration@006") # Imagen 2
+                print("Successfully loaded Imagen 2 model.")
+            except Exception as e2:
+                print(f"Failed to load Imagen 2 model: {e2}")
+                self.model = None
 
     def generate_smile(self, image_base64: str, mask_base64: str, prompt: str, negative_prompt: str = "") -> str:
         if not self.model:
