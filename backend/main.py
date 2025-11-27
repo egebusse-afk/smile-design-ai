@@ -10,7 +10,7 @@ import os
 import traceback
 
 from database import engine, init_db, get_db, User, Generation
-from auth import get_current_user, create_access_token, get_password_hash, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES
+from auth import get_current_user, create_access_token, get_password_hash, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user_optional
 from image_processing import ImageProcessor
 from generative_service import GenerativeService
 import replicate
@@ -117,7 +117,7 @@ async def generate_mask(file: UploadFile = File(...)):
 @app.post("/generate-smile")
 async def generate_smile(
     request: GenerateRequest, 
-    current_user: Optional[User] = Depends(get_current_user), # Optional auth for now, or enforce it
+    current_user: Optional[User] = Depends(get_current_user_optional), # Optional auth for now, or enforce it
     db: Session = Depends(get_db)
 ):
     try:
