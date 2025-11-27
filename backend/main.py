@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from image_processing import ImageProcessor
 from pydantic import BaseModel
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+
 app = FastAPI(title="Smile Design AI API")
 
 # Configure CORS
@@ -22,9 +26,18 @@ class MaskResponse(BaseModel):
     width: int
     height: int
 
+# Serve static files (Frontend)
+# We will mount the 'static' directory which will contain the exported Next.js app
+if os.path.exists("static"):
+    app.mount("/_next", StaticFiles(directory="static/_next"), name="next")
+    # We don't mount "/" directly to avoid conflict with API routes, 
+    # instead we serve index.html for root and catch-all
+
 @app.get("/")
-async def root():
-    return {"message": "Smile Design AI API is running"}
+async def read_index():
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    return {"message": "Smile Design AI API is running (Frontend not found)"}
 
 @app.get("/health")
 async def health_check():
