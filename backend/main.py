@@ -58,7 +58,7 @@ class Token(BaseModel):
 
 class GenerateRequest(BaseModel):
     image: str
-    mask: str
+    mask: Optional[str] = None
     prompt: Optional[str] = None # Legacy prompt
     style_prompt: Optional[str] = None # New material selection
     expert_prompt: Optional[str] = None # New expert notes
