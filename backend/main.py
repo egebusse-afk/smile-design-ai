@@ -44,9 +44,12 @@ processor = ImageProcessor()
 gen_service = GenerativeService()
 
 # --- Pydantic Models ---
+from pydantic import BaseModel, Field
+# ...
+
 class UserCreate(BaseModel):
     email: str
-    password: str
+    password: str = Field(..., max_length=72, description="Password must be less than 72 bytes")
     full_name: Optional[str] = None
 
 class Token(BaseModel):
