@@ -94,12 +94,13 @@ class GenerativeService:
                 generated_image = response.images[0]
                 
                 # Convert back to base64
-                # VertexImage has ._image_bytes or we can save to buffer
-                # The response object is GeneratedImage
-                
-                output_buffer = io.BytesIO()
-                generated_image.save(output_buffer, include_generation_parameters=False)
-                output_base64 = base64.b64encode(output_buffer.getvalue()).decode('utf-8')
+                # Vertex AI GeneratedImage.save() expects a path, not a buffer.
+                # We access the bytes directly.
+                if hasattr(generated_image, "_image_bytes"):
+                    output_base64 = base64.b64encode(generated_image._image_bytes).decode('utf-8')
+                else:
+                    # Fallback or safety check
+                    raise ValueError("Generated image does not contain bytes data.")
                 
                 return f"data:image/png;base64,{output_base64}"
             else:
