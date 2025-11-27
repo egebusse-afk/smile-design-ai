@@ -127,11 +127,11 @@ async def generate_smile(
         
         # Construct V2.0 Prompt
         full_prompt = f"""
-[ROLE]: You are an expert dental technician and AI artist.
-[TASK]: Edit the provided image. Keep the person's face, lips, skin tone, and identity EXACTLY the same. Only modify the teeth area.
-[STYLE]: {request.style_prompt if request.style_prompt else "Natural healthy teeth, standard white shade"}
-[USER_INSTRUCTION]: {request.expert_prompt if request.expert_prompt else "Ensure perfect anatomical fit."}
-[QUALITY]: 8k resolution, medical dental photography, macro lens, realistic lighting and reflection.
+High quality dental photography of a person smiling. 
+The image should be photorealistic, 8k resolution, captured with a macro lens.
+Focus on the teeth: {request.style_prompt if request.style_prompt else "Natural healthy teeth, standard white shade"}.
+Details: {request.expert_prompt if request.expert_prompt else "Perfect anatomical fit, realistic texture, natural light reflections."}
+Keep the face, skin, and lips exactly as they are. Only enhance the smile.
 """
         # If legacy prompt is provided and no new fields, fallback to it (or append it)
         if request.prompt and not request.style_prompt:

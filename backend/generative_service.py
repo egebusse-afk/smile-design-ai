@@ -85,7 +85,7 @@ class GenerativeService:
                 mask=v_mask_image,
                 prompt=prompt,
                 negative_prompt=negative_prompt or "bad anatomy, distorted, blur, noise, cartoon, low quality",
-                guidance_scale=60, # Higher guidance for better adherence to prompt
+                guidance_scale=20, # Reduced from 60 to prevent artifacts
                 number_of_images=1,
                 seed=None
             )
