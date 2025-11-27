@@ -250,25 +250,31 @@ export default function Dashboard() {
                                         <p className="text-sm text-slate-500 mt-2">Hasta fotoğrafını buraya sürükleyin veya seçin</p>
                                     </div>
                                 ) : (
-                                    <div className="relative rounded-2xl overflow-hidden bg-black aspect-[4/3] border border-white/10">
-                                        {generatedImage ? (
+                                <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 flex items-center justify-center min-h-[400px] max-h-[70vh]">
+                                    {generatedImage ? (
+                                        <div className="w-full h-full flex items-center justify-center">
                                             <ReactCompareImage 
                                                 leftImage={selectedImage} 
                                                 rightImage={generatedImage} 
                                                 sliderLineWidth={2}
                                                 handleSize={40}
                                             />
-                                        ) : (
-                                            <img src={selectedImage} alt="Original" className="w-full h-full object-contain" />
-                                        )}
-                                        
-                                        {isProcessing && (
-                                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
-                                                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                                                <p className="text-blue-400 font-medium animate-pulse">{processingStage}</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    ) : (
+                                        <img 
+                                            src={selectedImage} 
+                                            alt="Original" 
+                                            className="max-w-full max-h-[70vh] w-auto h-auto object-contain" 
+                                        />
+                                    )}
+                                    
+                                    {isProcessing && (
+                                        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
+                                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                            <p className="text-blue-400 font-medium animate-pulse">{processingStage}</p>
+                                        </div>
+                                    )}
+                                </div>
                                 )}
                             </div>
 
