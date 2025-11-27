@@ -86,3 +86,38 @@ async def generate_smile(request: GenerateRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/test-replicate")
+async def test_replicate_endpoint():
+    try:
+        import replicate
+        import os
+        
+        token = os.getenv("REPLICATE_API_TOKEN")
+        if not token:
+            return {"status": "error", "message": "REPLICATE_API_TOKEN is missing in environment variables"}
+            
+        # Test connection by fetching the model version
+        model_id = "stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3"
+        # We can't easily get version by ID directly without splitting, so let's just run a lightweight check
+        # or just check if we can list models.
+        
+        # Just checking if we can initialize client and get a model
+        client = replicate.Client(api_token=token)
+        model = client.models.get("stability-ai/stable-diffusion-inpainting")
+        version = model.versions.get("95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3")
+        
+        return {
+            "status": "success", 
+            "message": "Replicate API connection successful", 
+            "model_version": version.id,
+            "token_prefix": token[:4] + "..." if token else "None"
+        }
+    except Exception as e:
+        import traceback
+        traceback_str = traceback.format_exc()
+        return {
+            "status": "error", 
+            "message": str(e),
+            "traceback": traceback_str
+        }

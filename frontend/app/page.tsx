@@ -86,45 +86,19 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-8 font-sans">
-      <div className="max-w-6xl mx-auto space-y-12">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            AI Smile Design
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Gülüş Tasarımı AI
           </h1>
-          <p className="text-slate-400 text-lg">
-            Upload a photo to detect and mask the smile area automatically.
+          <p className="text-lg text-gray-600">
+            Yapay zeka ile hayalinizdeki gülüşü tasarlayın
           </p>
         </div>
 
-        {/* Upload Section */}
-        {!selectedImage && (
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <div className="flex flex-col items-center justify-center space-y-6">
-            <label className="relative cursor-pointer group">
-              <div className="w-64 h-32 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/50 flex flex-col items-center justify-center transition-all group-hover:border-blue-500 group-hover:bg-slate-900">
-                <Upload className="w-8 h-8 text-slate-400 group-hover:text-blue-400 mb-2" />
-                <span className="text-sm text-slate-400 group-hover:text-blue-300">
-                  Click to upload photo
-                </span>
-              </div>
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-            </label>
-          </div>
-        )}
-
-        {/* Controls */}
-        {selectedImage && (
-            <div className="flex flex-col items-center gap-4">
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setPrompt("perfect white teeth, natural smile")}
-                        className={`px-4 py-2 rounded-full text-sm ${prompt === "perfect white teeth, natural smile" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-300"}`}
                     >
                         Natural White
                     </button>
@@ -231,7 +205,38 @@ export default function Home() {
                 Bu bir tıbbi taahhüt değildir.
             </p>
         </div>
+        {/* Camera Modal */}
+        {showCamera && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg overflow-hidden max-w-2xl w-full">
+              <div className="relative bg-black">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-auto"
+                />
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+              <div className="p-4 flex justify-between items-center bg-gray-100">
+                <button
+                  onClick={stopCamera}
+                  className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={takePhoto}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium flex items-center"
+                >
+                  <div className="w-3 h-3 bg-white rounded-full mr-2 animate-pulse"></div>
+                  Fotoğraf Çek
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </main>
+    </div>
   );
 }
